@@ -9,7 +9,7 @@
 ![Status](https://img.shields.io/badge/status-live%20on%20studionet-2ea44f)
 ![Tests](https://img.shields.io/badge/tests-6%20passed-2ea44f)
 
-[Live Contract](https://explorer-studio.genlayer.com/address/0x3f6f4441d88284564DE4298082510f1d74E5Dec0) ·
+[Live Contract](https://explorer-studio.genlayer.com/address/0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c) ·
 [GenLayer Docs](https://docs.genlayer.com)
 
 </div>
@@ -24,8 +24,8 @@ Rigid rules like `if role == "admin"` can't express "allow this member to act �
 
 | | |
 |---|---|
-| **Contract** | [ContextAwareAccessControl](https://explorer-studio.genlayer.com/address/0x3f6f4441d88284564DE4298082510f1d74E5Dec0) |
-| **Address** | `0x3f6f4441d88284564DE4298082510f1d74E5Dec0` |
+| **Contract** | [ContextAwareAccessControl](https://explorer-studio.genlayer.com/address/0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c) |
+| **Address** | `0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c` |
 | **Network** | GenLayer studionet (chain `61999`) |
 | **Status** | ✅ deployed + audited on-chain |
 
