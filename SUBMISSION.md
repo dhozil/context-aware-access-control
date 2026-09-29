@@ -19,6 +19,8 @@ A reusable GenLayer primitive for AI-powered access control. Instead of rigid ro
 ## How Consensus Is Used
 The contract uses `gl.vm.run_nondet_unsafe()` with a custom validator function. Each validator independently evaluates the access request by running the same prompt with the provided context. Consensus is reached when validators agree on the allow/deny decision.
 
+The policy-effectiveness review runs the same consensus pattern; since GenVM eth_call cannot execute nondeterministic blocks, `evaluate_policy_effectiveness` is a write that stores its consensus-bound result (score must agree within 20 points), readable via the `get_last_effectiveness` view.
+
 ## Technical Details
 - Python-based GenLayer Intelligent Contract
 - Uses `gl.nondet.exec_prompt()` for LLM evaluation
