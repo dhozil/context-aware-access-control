@@ -183,6 +183,7 @@ class ContextAwareAccessControl(gl.Contract):
     decisions: TreeMap[str, AccessDecision]
     policy_decisions: TreeMap[str, str]
     requestor_history: TreeMap[str, str]
+    effectiveness: TreeMap[str, str]
 
     def __init__(self) -> None:
         self.owner = gl.message.sender_address
@@ -192,6 +193,7 @@ class ContextAwareAccessControl(gl.Contract):
         self.decisions = gl.storage.inmem_allocate(TreeMap[str, AccessDecision])
         self.policy_decisions = gl.storage.inmem_allocate(TreeMap[str, str])
         self.requestor_history = gl.storage.inmem_allocate(TreeMap[str, str])
+        self.effectiveness = gl.storage.inmem_allocate(TreeMap[str, str])
 
     # -------------------------------- policies --------------------------------
 
@@ -390,8 +392,10 @@ class ContextAwareAccessControl(gl.Contract):
             if did in self.decisions
         ]
 
-    @gl.public.view
-    def evaluate_policy_effectiveness(self, policy_id: str) -> dict:
+    # GenVM eth_call (view) cannot execute nondeterministic blocks, so the
+    # evaluation runs as a write and persists its consensus-bound result.
+    @gl.public.write
+    def evaluate_policy_effectiveness(self, policy_id: str) -> None:
         if policy_id not in self.policies:
             raise gl.vm.UserError("Policy not found")
         p = self.policies[policy_id]
@@ -405,50 +409,66 @@ class ContextAwareAccessControl(gl.Contract):
         ]
 
         if len(decisions_list) == 0:
-            return {
+            analysis = {
                 "effectiveness_score": 0,
                 "issues_found": [],
                 "suggestions": ["No decisions yet to evaluate"],
                 "recommended_changes": "",
             }
+        else:
+            def review_fn() -> dict:
+                prompt = _build_policy_review_prompt(policy_dict, decisions_list)
+                raw_res = _exec_prompt_json(prompt)
 
-        def review_fn() -> dict:
-            prompt = _build_policy_review_prompt(policy_dict, decisions_list)
-            raw_res = _exec_prompt_json(prompt)
+                if not raw_res:
+                    return {
+                        "effectiveness_score": 0,
+                        "issues_found": [],
+                        "suggestions": [],
+                        "recommended_changes": "",
+                    }
 
-            if not raw_res:
+                try:
+                    effectiveness = int(float(raw_res.get("effectiveness_score", 0)))
+                except (ValueError, TypeError):
+                    effectiveness = 0
+                effectiveness = max(0, min(100, effectiveness))
+
                 return {
-                    "effectiveness_score": 0,
-                    "issues_found": [],
-                    "suggestions": [],
-                    "recommended_changes": "",
+                    "effectiveness_score": effectiveness,
+                    "issues_found": raw_res.get("issues_found", []),
+                    "suggestions": raw_res.get("suggestions", []),
+                    "recommended_changes": str(raw_res.get("recommended_changes", "")),
                 }
 
-            try:
-                effectiveness = int(float(raw_res.get("effectiveness_score", 0)))
-            except (ValueError, TypeError):
-                effectiveness = 0
-            effectiveness = max(0, min(100, effectiveness))
+            def validator_fn(leader_result) -> bool:
+                if not isinstance(leader_result, gl.vm.Return):
+                    return False
+                ld = leader_result.calldata
+                if not isinstance(ld, dict):
+                    return False
+                my = review_fn()
+                if abs(my["effectiveness_score"] - int(ld.get("effectiveness_score", 0))) > 20:
+                    return False
+                return True
 
+            analysis = gl.vm.run_nondet_unsafe(review_fn, validator_fn)
+
+        self.effectiveness[policy_id] = json.dumps(analysis)
+
+    @gl.public.view
+    def get_last_effectiveness(self, policy_id: str) -> dict:
+        if policy_id not in self.policies:
+            raise gl.vm.UserError("Policy not found")
+        raw = self.effectiveness.get(policy_id, "")
+        if not raw:
             return {
-                "effectiveness_score": effectiveness,
-                "issues_found": raw_res.get("issues_found", []),
-                "suggestions": raw_res.get("suggestions", []),
-                "recommended_changes": str(raw_res.get("recommended_changes", "")),
+                "effectiveness_score": 0,
+                "issues_found": [],
+                "suggestions": ["No evaluation yet"],
+                "recommended_changes": "",
             }
-
-        def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            ld = leader_result.calldata
-            if not isinstance(ld, dict):
-                return False
-            my = review_fn()
-            if abs(my["effectiveness_score"] - int(ld.get("effectiveness_score", 0))) > 20:
-                return False
-            return True
-
-        return gl.vm.run_nondet_unsafe(review_fn, validator_fn)
+        return json.loads(raw)
 
     @gl.public.view
     def get_requestor_history(self, requestor: str) -> list:

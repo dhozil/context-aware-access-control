@@ -9,7 +9,7 @@
 ![Status](https://img.shields.io/badge/status-live%20on%20studionet-2ea44f)
 ![Tests](https://img.shields.io/badge/tests-6%20passed-2ea44f)
 
-[Live Contract](https://explorer-studio.genlayer.com/address/0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c) ·
+[Live Contract](https://explorer-studio.genlayer.com/address/0x6475786B8C378EF037D313DF5DDcc28c9842c439) ·
 [GenLayer Docs](https://docs.genlayer.com)
 
 </div>
@@ -24,8 +24,8 @@ Rigid rules like `if role == "admin"` can't express "allow this member to act �
 
 | | |
 |---|---|
-| **Contract** | [ContextAwareAccessControl](https://explorer-studio.genlayer.com/address/0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c) |
-| **Address** | `0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c` |
+| **Contract** | [ContextAwareAccessControl](https://explorer-studio.genlayer.com/address/0x6475786B8C378EF037D313DF5DDcc28c9842c439) |
+| **Address** | `0x6475786B8C378EF037D313DF5DDcc28c9842c439` |
 | **Network** | GenLayer studionet (chain `61999`) |
 | **Status** | ✅ deployed + audited on-chain |
 
@@ -52,7 +52,7 @@ check_access(requestor, resource, action, context)
       └── deny  ──── decision dX recorded (policy + requestor)
       │
       ▼ optional
-revoke_policy (owner) / evaluate_policy_effectiveness (view)
+revoke_policy (owner) / evaluate_policy_effectiveness (write)
 ```
 
 ## Methods
@@ -61,7 +61,8 @@ revoke_policy (owner) / evaluate_policy_effectiveness (view)
 |---|---|---|
 | Owner | `create_policy`, `revoke_policy` | owner-only |
 | Any | `check_access` | input-validated; use-limit / expiry enforced |
-| Any | `get_policy`, `get_all_policies`, `get_decision`, `get_policy_decisions`, `get_requestor_history`, `evaluate_policy_effectiveness` | read-only |
+| Any | `evaluate_policy_effectiveness` | write — eth_call cannot run nondeterministic blocks, so the LLM review runs as a transaction and stores its result |
+| Any | `get_policy`, `get_all_policies`, `get_decision`, `get_policy_decisions`, `get_requestor_history`, `get_last_effectiveness` | read-only |
 
 ## Security Model
 

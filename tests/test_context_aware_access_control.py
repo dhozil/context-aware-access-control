@@ -132,3 +132,46 @@ def test_validator_agrees_on_decision(direct_vm, direct_deploy):
     assert ok is True
     bad = direct_vm.run_validator(leader_result={"decision": "deny"}, index=-1)
     assert bad is False
+
+def test_evaluate_policy_effectiveness(direct_vm, direct_deploy):
+    """Evaluation is a write (eth_call cannot run nondet); result is stored and read back."""
+    contract = direct_deploy("contracts/context_aware_access_control.py")
+    owner = create_address("owner")
+    requestor = create_address("requestor")
+    pid = _create_policy(contract, direct_vm, owner)
+
+    # No decisions yet -> deterministic default, no LLM involved.
+    direct_vm.sender = owner
+    contract.evaluate_policy_effectiveness(pid)
+    stored = contract.get_last_effectiveness(pid)
+    assert stored["effectiveness_score"] == 0
+    assert stored["suggestions"] == ["No decisions yet to evaluate"]
+
+    # Before any evaluation the getter returns its own zero-state default.
+    pid2 = _create_policy(contract, direct_vm, owner)
+    assert contract.get_last_effectiveness(pid2)["suggestions"] == ["No evaluation yet"]
+
+    # Record a decision so the LLM review path runs.
+    direct_vm.mock_llm(re.escape("context-aware access control evaluator"), ALLOW_JSON)
+    direct_vm.sender = requestor
+    contract.check_access(pid, "/admin/*", "manage", "2FA admin session")
+
+    REVIEW_JSON = json.dumps({
+        "effectiveness_score": 70,
+        "issues_found": ["Occasional context mismatches"],
+        "suggestions": ["Tighten the required context wording"],
+        "recommended_changes": "Require hardware-key proof for admin actions.",
+    })
+    direct_vm.mock_llm(re.escape("policy effectiveness reviewer"), REVIEW_JSON)
+    direct_vm.sender = owner
+    contract.evaluate_policy_effectiveness(pid)
+    result = contract.get_last_effectiveness(pid)
+    assert result["effectiveness_score"] == 70
+    assert result["issues_found"] == ["Occasional context mismatches"]
+    assert result["recommended_changes"] == "Require hardware-key proof for admin actions."
+
+    # Validator tolerance: within 20 points passes, beyond it fails.
+    ok = direct_vm.run_validator(leader_result={"effectiveness_score": 70}, index=-1)
+    assert ok is True
+    bad = direct_vm.run_validator(leader_result={"effectiveness_score": 10}, index=-1)
+    assert bad is False

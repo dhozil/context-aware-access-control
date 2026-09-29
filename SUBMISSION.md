@@ -30,9 +30,9 @@ The contract uses `gl.vm.run_nondet_unsafe()` with a custom validator function. 
 DAO permissions, DeFi access control, NFT-gated content, multi-party authorization - any scenario where rigid rules fail to capture the nuance of real-world access requirements.
 
 ## Live Deployment
-- **Address**: `0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c`
+- **Address**: `0x6475786B8C378EF037D313DF5DDcc28c9842c439`
 - **Network**: GenLayer studionet (chain `61999`)
-- **Explorer**: https://explorer-studio.genlayer.com/address/0x18C0c4e1131C2402daAAe36baD9C1089f1C24F3c
+- **Explorer**: https://explorer-studio.genlayer.com/address/0x6475786B8C378EF037D313DF5DDcc28c9842c439
 
 ## Source Code
 See `contracts/context_aware_access_control.py`
